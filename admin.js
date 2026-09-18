@@ -1,7 +1,8 @@
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
-import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import {getFirestore,collection,getDocs,doc,getDoc,setDoc,updateDoc,writeBatch} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import {firebaseConfig} from './firebase-config.js'; import {presenters as defaults, criteria} from './presenters.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
+import { presenters as defaults, criteria } from './presenters.js';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let role=null,lastVotes=[],presenters=[],votingOpen=false;
 function ownerUI(){document.querySelectorAll('.ownerOnly').forEach(x=>x.classList.toggle('hidden',role!=='owner'));$('roleText').textContent=`Signed in as ${auth.currentUser?.email||''} — ${role||'unauthorized'}`}
 onAuthStateChanged(auth,async u=>{if(!u){role=null;$('login').classList.remove('hidden');$('dash').classList.add('hidden');return}try{const r=await getDoc(doc(db,'moderators',u.uid));role=r.exists()?r.data().role:null;if(!['owner','moderator'].includes(role))throw Error('This account is not an approved moderator.');$('login').classList.add('hidden');$('dash').classList.remove('hidden');ownerUI();await refresh()}catch(e){$('loginMsg').textContent=e.message;await signOut(auth)}});
