@@ -1,10 +1,9 @@
-// Replace these values with Firebase Console > Project settings > Your apps > Web app config.
 export const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT.firebaseapp.com",
-  projectId: "PASTE_PROJECT",
-  storageBucket: "PASTE_PROJECT.firebasestorage.app",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyBF-z_Mc1ytAxhZLHYArcaI23tf4Aa7cPA",
+  authDomain: "nusgss-3mt-voting.firebaseapp.com",
+  projectId: "nusgss-3mt-voting",
+  storageBucket: "nusgss-3mt-voting.firebasestorage.app",
+  messagingSenderId: "238072127931",
+  appId: "1:238072127931:web:7c2862d2bbed04121ea49e",
+  measurementId: "G-Q5GF0QX9XM"
 };
-export const MODERATOR_EMAIL = "YOUR_MODERATOR_EMAIL@u.nus.edu";

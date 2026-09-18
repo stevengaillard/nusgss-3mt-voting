@@ -1,25 +1,35 @@
-# NUSGSS 3MT Voting System
+# NUSGSS 3MT Voting System v2
 
-Static HTML + Firebase Authentication + Cloud Firestore. It can be hosted on GitHub Pages; no Firebase Hosting is required.
+Static HTML + Firebase Authentication + Cloud Firestore, designed for GitHub Pages.
 
-## Why Firebase instead of Excel as the live database?
-Firestore safely handles many phones at once. Excel is generated only as the results/export format. Duplicate votes are prevented by a unique Firestore document ID: `VOTINGCODE_PRESENTERID`.
+## What changed from v1
+- No manual voting codes.
+- Audience signs in automatically with Firebase Anonymous Authentication.
+- One anonymous Firebase UID can submit one vote per presenter.
+- Multiple moderator accounts are supported through the Firestore `moderators/{uid}` role document.
+- `owner` can reset votes, sync/edit presenters; `moderator` can view/export results and open/close voting.
+- Dashboard shows top 3 in each of 3 rooms (9 winners) plus overall ranking.
+- Excel export includes Ranking, Room 1-3, and P01-P30 sheets.
 
-## 1. Create Firebase project
-1. Go to Firebase Console and create a project (e.g. `nusgss-3mt-2026`).
-2. Build > Firestore Database > Create database. Choose a nearby region and start in production mode.
-3. Build > Authentication > Sign-in method > enable Email/Password.
-4. Authentication > Users > Add user. Create ONE moderator account using your email and a strong password.
-5. Project settings > Your apps > Web > Register app. Copy the Firebase config values.
+## Firebase prerequisites
+1. Authentication: enable Email/Password and Anonymous.
+2. Firestore: create `(default)` database in production mode.
+3. Create `event/settings` with `eventName = "NUSGSS 3MT 2026"` and `votingOpen = false`.
+4. Create `moderators/<YOUR_FIREBASE_UID>` with fields `name`, `email`, and `role = "owner"`.
+5. Paste `firestore.rules` into Firestore > Rules and Publish.
 
-## 2. Configure this project
-1. Open `firebase-config.js`; paste the web app config and set `MODERATOR_EMAIL`.
-2. Open `firestore.rules`; replace `YOUR_MODERATOR_EMAIL@u.nus.edu` with the exact same moderator email.
-3. Firebase Console > Firestore Database > Rules: paste `firestore.rules`, then Publish.
-4. Edit `presenters.js` with the 30 real names/titles. P01-P10 = Room 1, P11-P20 = Room 2, P21-P30 = Room 3 by default.
+## First login
+1. Open `admin.html` through your deployed GitHub Pages site.
+2. Sign in with the Email/Password account whose UID has `role = owner`.
+3. Click **Initialize / sync presenters** once. This creates P01-P30 in Firestore.
+4. Use Edit beside a presenter to change the name/title. Rooms default to P01-P10 Room 1, P11-P20 Room 2, P21-P30 Room 3.
+5. Keep voting CLOSED while testing/setup. Open it from the dashboard when the event begins.
 
-## 3. Upload to GitHub
-Create a new repository and upload ONLY:
+## Additional moderators
+Create each moderator under Firebase Authentication > Users with Email/Password. Copy their UID, then as owner create `moderators/<THEIR_UID>` in Firestore with `name`, `email`, `role = "moderator"`. Do not share passwords.
+
+## GitHub Pages
+Upload these files to the repository root:
 - `index.html`
 - `admin.html`
 - `style.css`
@@ -29,29 +39,17 @@ Create a new repository and upload ONLY:
 - `firebase-config.js`
 - `README.md`
 
-Do NOT upload Excel exports containing results/voting codes. `firestore.rules` may be uploaded; it contains no password, but it does contain the moderator email.
+You may also commit `firestore.rules` for version control. It contains no password/private service-account key.
 
-Then GitHub repository > Settings > Pages > Deploy from a branch > `main` / root. Wait for the Pages URL.
+Then GitHub > repository Settings > Pages > Deploy from branch > `main` / root.
 
-## 4. Firebase authorized domain
-Firebase Console > Authentication > Settings > Authorized domains. Add your GitHub Pages host, e.g. `yourname.github.io`.
+In Firebase Authentication > Settings > Authorized domains, add your GitHub Pages hostname, e.g. `yourusername.github.io`.
 
-## 5. Before the event
-1. Open `/admin.html` on the deployed site and sign in.
-2. Click `Create 150 voting codes` ONCE. Copy the codes immediately and distribute one per attendee (printed slips/registration QR mapping). Codes themselves contain no personal information.
-3. Test: use one code to score P01. A second P01 submission with the same code must fail; P02 with the same code must work.
-4. In Moderator, verify the ranking changes and test Export Excel.
-5. Use RESET ALL VOTES after testing. This deletes votes but keeps voting codes.
+## Room QR links
+Use these as the QR destinations after deployment:
+- Room 1: `https://YOURUSERNAME.github.io/YOURREPO/?room=1`
+- Room 2: `https://YOURUSERNAME.github.io/YOURREPO/?room=2`
+- Room 3: `https://YOURUSERNAME.github.io/YOURREPO/?room=3`
 
-## Voting logic
-Each code can score EACH presenter once. A voter can therefore score all presenters in their room, but cannot score the same presenter twice. Scores are 1-5 for Clarity, Engagement, Research Significance, and Delivery. Final score is the simple average of the four criterion averages.
-
-## Security notes
-- The moderator password is NEVER placed in GitHub. Firebase Authentication stores it.
-- Firestore rules permit only the configured moderator email to read rankings, create voting codes, or delete votes.
-- Audience clients can create a vote only if the token exists and score values are 1-5.
-- This is stronger than browser/device fingerprinting and avoids collecting attendee identity.
-- A person who deliberately shares their code can still let another person use it. If you need identity-bound voting, use authenticated attendee accounts instead.
-
-## Excel
-The moderator page's `Export Excel` creates `NUSGSS_3MT_Results.xlsx` with a Ranking sheet plus P01-P30 sheets. A blank planning/template workbook is also supplied separately with this package.
+## Important limitation
+Anonymous authentication identifies a browser installation, not a physical human. A determined person can use another browser/device or clear site data and receive another anonymous UID. IP blocking is not recommended because many attendees may share the same campus/network public IP. For stronger identity-bound voting, require attendee sign-in or unique credentials.

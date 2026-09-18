@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAnonymous() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+    function hasRole(role) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/moderators/$(request.auth.uid))
+        && get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.role == role;
+    }
+    function isModerator() { return hasRole('moderator') || hasRole('owner'); }
+    function isOwner() { return hasRole('owner'); }
+    function votingOpen() {
+      return exists(/databases/$(database)/documents/event/settings)
+        && get(/databases/$(database)/documents/event/settings).data.votingOpen == true;
+    }
+
+    match /presenters/{presenterId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isOwner();
+    }
+
+    match /event/settings {
+      allow read: if signedIn();
+      allow create, delete: if isOwner();
+      allow update: if isOwner() || (isModerator()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votingOpen']));
+    }
+
+    match /votes/{voteId} {
+      allow create: if isAnonymous()
+        && votingOpen()
+        && request.resource.data.keys().hasOnly([
+          'voterUid','presenterId','clarity','engagement','significance','delivery','createdAt'
+        ])
+        && request.resource.data.voterUid == request.auth.uid
+        && request.resource.data.presenterId is string
+        && exists(/databases/$(database)/documents/presenters/$(request.resource.data.presenterId))
+        && voteId == request.auth.uid + '_' + request.resource.data.presenterId
+        && request.resource.data.clarity is int && request.resource.data.clarity >= 1 && request.resource.data.clarity <= 5
+        && request.resource.data.engagement is int && request.resource.data.engagement >= 1 && request.resource.data.engagement <= 5
+        && request.resource.data.significance is int && request.resource.data.significance >= 1 && request.resource.data.significance <= 5
+        && request.resource.data.delivery is int && request.resource.data.delivery >= 1 && request.resource.data.delivery <= 5
+        && request.resource.data.createdAt == request.time;
+      allow read: if isModerator();
+      allow update: if false;
+      allow delete: if isOwner();
+    }
+
+    match /moderators/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isOwner());
+      allow create, update, delete: if isOwner();
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
