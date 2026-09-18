@@ -462,9 +462,8 @@ $('submit').onclick = async () => {
     if (error.code === 'permission-denied') {
 
       $('msg').textContent =
-        'You may have already scored this presenter. ' +
-        'Each device can vote once per presenter.';
-
+        'Vote could not be submitted. This may be because this presenter has already been scored on this device.';
+    
     }
 
     else {
