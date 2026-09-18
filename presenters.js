@@ -1,0 +1,2 @@
+export const presenters = Array.from({length:30},(_,i)=>({id:`P${String(i+1).padStart(2,'0')}`,name:`Presenter ${String(i+1).padStart(2,'0')}`,room:Math.floor(i/10)+1,title:`Research title ${String(i+1).padStart(2,'0')}`}));
+export const criteria=[['clarity','Clarity & accessibility'],['engagement','Engagement & storytelling'],['significance','Research significance'],['delivery','Delivery & time management']];
