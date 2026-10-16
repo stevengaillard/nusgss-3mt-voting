@@ -302,27 +302,41 @@ $('toggleVoting').onclick = async () => {
 
 $('seed').onclick = async () => {
   if (role !== 'owner') return;
-
-  if (!confirm('Create/update the 30 presenter records from presenters.js?')) {
+  if (votingOpen) {
+    alert('Close voting before syncing presenters.');
     return;
   }
-
-  for (let i = 0; i < defaults.length; i += 400) {
-    const batch = writeBatch(db);
-
-    defaults.slice(i, i + 400).forEach(p =>
-      batch.set(
-        doc(db, 'presenters', p.id),
-        { name: p.name, room: p.room, title: p.title },
-        { merge: true }
-      )
-    );
-
-    await batch.commit();
+  if (defaults.length !== 24 || new Set(defaults.map(p => p.id)).size !== 24) {
+    alert('presenters.js must contain exactly 24 unique presenters. Sync cancelled.');
+    return;
   }
-
-  await refresh();
-  alert('Presenter records synchronized.');
+  if (!confirm('Replace the presenter roster with the 24 people in presenters.js? Old presenter records will be removed. Continue?')) return;
+  const button = $('seed');
+  button.disabled = true;
+  try {
+    const [voteSnap, existingSnap] = await Promise.all([
+      getDocs(collection(db, 'votes')),
+      getDocs(collection(db, 'presenters'))
+    ]);
+    if (!voteSnap.empty) {
+      alert('Sync cancelled: votes exist. Export results and reset test votes first. No presenter records were changed.');
+      return;
+    }
+    const wanted = new Set(defaults.map(p => p.id));
+    const batch = writeBatch(db);
+    existingSnap.docs.filter(d => !wanted.has(d.id)).forEach(d => batch.delete(d.ref));
+    defaults.forEach(p => batch.set(doc(db, 'presenters', p.id), {
+      name: p.name, room: p.room, title: p.title, category: p.category
+    }, { merge: true }));
+    await batch.commit();
+    await refresh();
+    alert('Presenter sync complete: 24 official presenters loaded. Old placeholders removed.');
+  } catch (error) {
+    console.error('Presenter sync failed:', error);
+    alert('Presenter sync failed: ' + error.message + '. Check Firestore permissions and your owner role.');
+  } finally {
+    button.disabled = false;
+  }
 };
 
 async function editPresenter(id) {
