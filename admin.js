@@ -115,7 +115,7 @@ function deriveAudienceWeights() {
 }
 
 function officialTie(a, b) {
-  return Math.abs(a.final - b.final) < TIE_EPSILON;
+  return a.votes > 0 && b.votes > 0 && Math.abs(a.final - b.final) < TIE_EPSILON;
 }
 
 function calcRows() {
@@ -236,7 +236,7 @@ async function refresh() {
       <tr>
         <td>${index + 1}</td>
         <td>${row.id} — ${esc(row.name)}</td>
-        <td>${row.room}</td>
+        <td>ERC ${Number(row.room) === 3 ? 8 : row.room}</td>
         ${criteria.map(([key]) =>
           `<td>${row[key].toFixed(2)}</td>`
         ).join('')}
@@ -254,31 +254,25 @@ async function refresh() {
     button.onclick = () => editPresenter(button.dataset.id);
   });
 
+  // Winners are selected independently by category: two Formal, one Informal.
+  // Keep the original overall ranking and tie-break calculations untouched.
   $('winners').innerHTML = [1, 2, 3]
     .map(room => {
-      const top = rows
-        .filter(row => Number(row.room) === room)
-        .slice(0, 3);
-
-      return `
-        <div class="winnerbox">
-          <h3>Room ${room}</h3>
-          ${
-            top.map((row, index) => `
-              <p>
-                <b>${['🥇', '🥈', '🥉'][index]} ${row.id} — ${esc(row.name)}</b><br>
-                Official: ${row.final.toFixed(3)}
-                ${row.tieApplied
-                  ? `<br><span class="tieflag">Tie-break applied: ${row.tieBreak.toFixed(4)}</span>`
-                  : ''}
-                · ${row.votes} votes
-              </p>
-            `).join('') || '<p>No presenters yet.</p>'
-          }
-        </div>
-      `;
-    })
-    .join('');
+      const roomRows = rows.filter(row => Number(row.room) === room);
+      const formal = roomRows.filter(row => row.category === 'Formal' && row.votes > 0).slice(0, 2);
+      const informal = roomRows.filter(row => row.category === 'Informal' && row.votes > 0).slice(0, 1);
+      const winnerLine = (row, label) => row
+        ? `<p><b>${label}: ${esc(row.id)} — ${esc(row.name)}</b><br>
+             Official: ${row.final.toFixed(3)}
+             ${row.tieApplied ? `<br><span class="tieflag">Tie-break applied: ${row.tieBreak.toFixed(4)}</span>` : ''}
+             · ${row.votes} votes</p>`
+        : `<p><b>${label}:</b> Awaiting scores</p>`;
+      return `<div class="winnerbox"><h3>ERC ${room === 3 ? 8 : room}</h3>
+        ${winnerLine(formal[0], 'Formal 1st')}
+        ${winnerLine(formal[1], 'Formal 2nd')}
+        ${winnerLine(informal[0], 'Informal 1st')}
+      </div>`;
+    }).join('');
 
   const tieCount = rows.filter(r => r.tieApplied).length;
   $('status').textContent =
@@ -306,8 +300,8 @@ $('seed').onclick = async () => {
     alert('Close voting before syncing presenters.');
     return;
   }
-  if (defaults.length !== 24 || new Set(defaults.map(p => p.id)).size !== 24) {
-    alert('presenters.js must contain exactly 24 unique presenters. Sync cancelled.');
+  if (defaults.length !== 24 || new Set(defaults.map(p => p.id)).size !== 24 || [1, 2, 3].some(room => defaults.filter(p => Number(p.room) === room).length !== 8)) {
+    alert('presenters.js must contain 24 unique presenters, 8 in each room. Sync cancelled.');
     return;
   }
   if (!confirm('Replace the presenter roster with the 24 people in presenters.js? Old presenter records will be removed. Continue?')) return;
@@ -330,6 +324,7 @@ $('seed').onclick = async () => {
     }, { merge: true }));
     await batch.commit();
     await refresh();
+    if (presenters.length !== 24) throw Error('Sync completed but the displayed roster is not 24. Please inspect Firestore.');
     alert('Presenter sync complete: 24 official presenters loaded. Old placeholders removed.');
   } catch (error) {
     console.error('Presenter sync failed:', error);
@@ -471,9 +466,31 @@ $('export').onclick = async () => {
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.json_to_sheet(roomRows),
-      `Room ${room}`
+      `ERC ${room === 3 ? 8 : room}`
     );
   });
+
+  // Award slots: category-specific winners, three per ERC room.
+  const awardRows = [1, 2, 3].flatMap(room => {
+    const inRoom = rows.filter(r => Number(r.room) === room);
+    const formal = inRoom.filter(r => r.category === 'Formal' && r.votes > 0);
+    const informal = inRoom.filter(r => r.category === 'Informal' && r.votes > 0);
+    return [
+      ['Formal 1st', formal[0]], ['Formal 2nd', formal[1]],
+      ['Informal 1st', informal[0]]
+    ].map(([award, p]) => ({
+      Room: `ERC ${room === 3 ? 8 : room}`,
+      Award: award,
+      ID: p?.id || '',
+      Presenter: p?.name || 'Awaiting scores',
+      Category: p?.category || '',
+      'Official Score': p?.final ?? '',
+      'Tie-break Applied': p?.tieApplied ? 'Yes' : 'No',
+      'Tie-break Score': p?.tieApplied ? p.tieBreak : '',
+      Votes: p?.votes || 0
+    }));
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(awardRows), '9 Winners');
 
   [...presenters]
     .sort((a, b) => a.id.localeCompare(b.id))
