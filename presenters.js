@@ -143,11 +143,11 @@ export const presenters = [
   },
   {
     "id": "C02",
-    "name": "Alefiya Taher Dohadwala",
+    "name": "Stella Hadiwidjaja",
     "room": 3,
-    "title": "Engineering a cell factory for ergot alkaloid prodcution",
+    "title": "",
     "category": "Formal",
-    "email": "E0559486@U.NUS.EDU"
+    "email": "stella.hadiwidjaja@u.nus.edu"
   },
   {
     "id": "C03",
