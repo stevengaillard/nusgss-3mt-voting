@@ -1,8 +1,8 @@
 // Source: workbook Room and Presenters sheets only. Internal room 3 corresponds to ERC Seminar Room 8.
 export const rooms = {
-  "1": "Seminar Room 1 (UT23-02-07)",
-  "2": "Seminar Room 2 (UT23-02-08)",
-  "3": "Seminar Room 8 (UT23-02-14)"
+  "1": "Seminar Room 1",
+  "2": "Seminar Room 8",
+  "3": "Seminar Room 9"
 };
 export const presenters = [
   {
