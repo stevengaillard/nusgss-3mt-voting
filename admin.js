@@ -236,7 +236,7 @@ async function refresh() {
       <tr>
         <td>${index + 1}</td>
         <td>${row.id} — ${esc(row.name)}</td>
-        <td>ERC ${Number(row.room) === 3 ? 8 : row.room}</td>
+        <td>ERC ${Number(row.room) === 2 ? 8 : Number(row.room) === 3 ? 9 : 1}</td>
         ${criteria.map(([key]) =>
           `<td>${row[key].toFixed(2)}</td>`
         ).join('')}
@@ -267,7 +267,7 @@ async function refresh() {
              ${row.tieApplied ? `<br><span class="tieflag">Tie-break applied: ${row.tieBreak.toFixed(4)}</span>` : ''}
              · ${row.votes} votes</p>`
         : `<p><b>${label}:</b> Awaiting scores</p>`;
-      return `<div class="winnerbox"><h3>ERC ${room === 3 ? 8 : room}</h3>
+      return `<div class="winnerbox"><h3>ERC ${room === 2 ? 8 : room === 3 ? 9 : 1}</h3>
         ${winnerLine(formal[0], 'Formal 1st')}
         ${winnerLine(formal[1], 'Formal 2nd')}
         ${winnerLine(informal[0], 'Informal 1st')}
@@ -466,7 +466,7 @@ $('export').onclick = async () => {
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.json_to_sheet(roomRows),
-      `ERC ${room === 3 ? 8 : room}`
+      `ERC ${room === 2 ? 8 : room === 3 ? 9 : 1}`
     );
   });
 
@@ -479,7 +479,7 @@ $('export').onclick = async () => {
       ['Formal 1st', formal[0]], ['Formal 2nd', formal[1]],
       ['Informal 1st', informal[0]]
     ].map(([award, p]) => ({
-      Room: `ERC ${room === 3 ? 8 : room}`,
+      Room: `ERC ${room === 2 ? 8 : room === 3 ? 9 : 1}`,
       Award: award,
       ID: p?.id || '',
       Presenter: p?.name || 'Awaiting scores',
